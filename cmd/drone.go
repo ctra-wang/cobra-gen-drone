@@ -2,12 +2,10 @@ package cmd
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"github.com/logrusorgru/aurora"
 	"github.com/spf13/cobra"
 	"github.com/zeromicro/go-zero/tools/goctl/util/pathx"
-
 	"os"
 	"strings"
 	"text/template"
@@ -32,9 +30,8 @@ type Drone struct {
 
 func DroneGenerator(_ *cobra.Command, _ []string) error {
 
-	//步骤四
-	//自己填充模版逻辑
-
+	// 步骤四
+	// 对所有的传入的参数进行一一判断
 	dronename := DroneName
 	if len(dronename) == 0 {
 		dronename = "dronegen-greet"
@@ -53,38 +50,26 @@ func DroneGenerator(_ *cobra.Command, _ []string) error {
 	repo := Repo
 	tag := Tag
 
-	fmt.Println(serviceName)
-	fmt.Println(serviceType)
-	fmt.Println(gitBranch)
-	fmt.Println(registry)
-	fmt.Println(repo)
-	fmt.Println(tag)
-
-	out, err := os.Create(".drone.yml")
+	file, err := os.Create("drone.yml")
 	if err != nil {
+		fmt.Println("文件创建失败:", err)
 		return err
+	} else {
+		fmt.Println("文件创建成功!")
 	}
 
-	defer func(out *os.File) {
-		err := out.Close()
-		if err != nil {
-			fmt.Println(aurora.Green(err))
-		}
-	}(out)
+	defer file.Close()
 
 	text, err := pathx.LoadTemplate("dronegen", "drone.tpl", UsageTpl)
 	if err != nil {
+		fmt.Println("打开模板失败:", err)
 		return err
+	} else {
+		fmt.Println("打开模板成功!")
 	}
-
-	marshal, err := json.Marshal(text)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(marshal))
 
 	t := template.Must(template.New("dronegen").Parse(text))
-	t.Execute(out, Drone{
+	return t.Execute(file, Drone{
 		DroneName:   dronename,
 		GoPrivate:   goprivate,
 		ServiceName: serviceName,
@@ -95,7 +80,6 @@ func DroneGenerator(_ *cobra.Command, _ []string) error {
 		Tag:         tag,
 	})
 	fmt.Println(aurora.Green("Done."))
-	//os.WriteFile("test2.txt", []byte("hello,Jessica"), os.ModePerm)
 
 	return nil
 }
