@@ -1,0 +1,40 @@
+kind: pipeline
+type: docker
+name: base-rpc
+steps:
+  - name: build-go
+    image: golang:1.20.3
+    depends_on: [clone]
+    volumes:
+      - name: go_cache
+        path: /go/pkg/mod
+    commands:
+      - go env -w CGO_ENABLED=0
+      - go env -w GOPROXY=https://goproxy.cn,direct
+      - go env -w GOPRIVATE= gitee.com
+      - go mod tidy && go build -trimpath -ldflags "-s -w" -o app baserpc.go.go
+
+  - name: build-rpc
+    image: plugins/docker:20
+    environment:
+      DRONE_REPO_BRANCH: master
+    depends_on: [build-go]
+    settings:
+      dockerfile: Dockerfile
+      registry: registry.cn-beijing.aliyuncs.com
+      repo: registry.cn-beijing.aliyuncs.com/ctra_test/ctra-go-zhiye-rpc:latest
+      auto_tag: true
+      insecure: true
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+trigger:
+  ref:
+    - refs/tags/*
+    - refs/heads/master
+
+volumes:
+  - name: go_cache
+    host:
+      path: /root/.go/cache
